@@ -119,7 +119,43 @@
           (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2,
           this._resizeConstraint.side - this._ctx.lineWidth / 2,
           this._resizeConstraint.side - this._ctx.lineWidth / 2);
-
+			// Отрисовка затемнения от края области кадрирования до конца холста 
+			this._ctx.fillStyle='rgba(0,0,0,0.8)';
+			//Левый прямоугольник
+			this._ctx.fillRect(
+			  	-this._container.width/2,
+				  -this._container.height/2,
+				  (this._container.width/2)-(this._resizeConstraint.side / 2)- this._ctx.lineWidth,
+				  this._container.height);
+			//Правый прямоугольник
+			this._ctx.fillRect(
+			  	(this._resizeConstraint.side / 2) - (this._ctx.lineWidth / 2),
+				  -this._container.height/2,
+				  (this._container.width/2)-(this._resizeConstraint.side / 2)+(this._ctx.lineWidth / 2),
+				  this._container.height);
+			//Верхний прямоугольник
+			this._ctx.fillRect(
+			  	-(this._resizeConstraint.side / 2) - this._ctx.lineWidth ,
+				  -this._container.height/2,
+				  this._resizeConstraint.side + (this._ctx.lineWidth /2),
+				  (this._container.height /2) -(this._resizeConstraint.side / 2) - this._ctx.lineWidth);
+			//Нижний прямоугольник
+			this._ctx.fillRect(
+			  	-(this._resizeConstraint.side / 2) - this._ctx.lineWidth ,
+				  (this._resizeConstraint.side / 2) - (this._ctx.lineWidth /2),
+				  this._resizeConstraint.side + (this._ctx.lineWidth /2),
+				  (this._container.height /2) -(this._resizeConstraint.side / 2) +(this._ctx.lineWidth /2) );
+			//Текст над изображением
+			this._ctx.fillStyle='white';
+			this._ctx.font= (this._resizeConstraint.side / 15) + 'px Tahoma';
+			this._ctx.textBaseline='bottom';
+			this._ctx.textAlign='center';
+			this._ctx.fillText(
+				this._image.naturalWidth+' x '+ this._image.naturalHeight,
+				0,
+			  -(this._resizeConstraint.side / 2) - (this._ctx.lineWidth *2));
+			
+	
       // Восстановление состояния канваса, которое было до вызова ctx.save
       // и последующего изменения системы координат. Нужно для того, чтобы
       // следующий кадр рисовался с привычной системой координат, где точка
