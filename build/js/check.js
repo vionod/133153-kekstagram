@@ -1,3 +1,19 @@
+var sum = function (a) {
+  var result = 0;
+  for (var i=0; i < a.length; i++) {
+    result += a[i];
+  }
+  return result;
+}
+
+var square = function (a, b) {
+  var result = 0;
+  for (var i=0; i < a.length && i < b.length; i++) {
+    result += a[i] * b[i];
+  }
+  return result;
+}
+
 var getMessage = function (a, b) {
 
 if (typeof a == "boolean") {
@@ -9,17 +25,11 @@ if (typeof a == "boolean") {
 } else if (typeof a == "number") {
   return "Переданное SVG-изображение содержит " + a + " объектов и " + b * 4 + " атрибутов";
 } else if (Array.isArray(a) && !Array.isArray(b)) {
-  var sum = 0;
-  for (var i=0; i < a.length; i++) {
-    sum += a[i];
-  }
-  return "Количество красных точек во всех строчках изображения: " + sum;
+
+  return "Количество красных точек во всех строчках изображения: " + sum(a);
 } else if (Array.isArray(a) && Array.isArray(b)) {
-  var square = 0;
-  for (var i=0; i < a.length && i < b.length; i++) {
-    square += a[i] * b[i];
-  }
-  return "Общая площадь артефактов сжатия: " + square + " пикселей";
+
+  return "Общая площадь артефактов сжатия: " + square(a,b) + " пикселей";
 }
 
 }
