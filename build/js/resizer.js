@@ -112,13 +112,45 @@
       // Координаты задаются от центра холста.
       this._ctx.drawImage(this._image, displX, displY);
 
+      // Отрисовка фигуры, затеняющей изоражений.
+      // Внешняя граница фона
+      this._ctx.beginPath();
+      this._ctx.moveTo(displX, displY);
+      this._ctx.lineTo(displX + this._container.width, displY);
+      this._ctx.lineTo(displX + this._container.width, displY + this._container.height);
+      this._ctx.lineTo(displX, displY + this._container.height);
+      this._ctx.lineTo(displX, displY);
+
+      // Установка координат кадрируемого изображения
+      var crop = new Rectangle(Math.min(Math.max(-this._resizeConstraint.side / 2, displX), displX + this._container.width),
+          Math.min(Math.max(-this._resizeConstraint.side / 2, displY), displY + this._container.height),
+          Math.min(Math.max(this._resizeConstraint.side / 2, displX), displX + this._container.width),
+          Math.min(Math.max(this._resizeConstraint.side / 2, displY), displY + this._container.height)
+        );
+
+      // Пересечение с областью, кадрируемого изображения,
+      // которое не треьуется затенять.
+      this._ctx.moveTo(crop.x1, crop.y1);
+      this._ctx.lineTo(crop.x2, crop.y1);
+      this._ctx.lineTo(crop.x2, crop.y2);
+      this._ctx.lineTo(crop.x1, crop.y2);
+      this._ctx.lineTo(crop.x1, crop.y1);
+      this._ctx.fillStyle = 'rgba(0, 0, 0, .8)';
+      this._ctx.fill('evenodd');
+
       // Отрисовка прямоугольника, обозначающего область изображения после
       // кадрирования. Координаты задаются от центра.
       this._ctx.strokeRect(
           (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2,
           (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2,
-          this._resizeConstraint.side - this._ctx.lineWidth / 2,
-          this._resizeConstraint.side - this._ctx.lineWidth / 2);
+          this._resizeConstraint.side + this._ctx.lineWidth,
+          this._resizeConstraint.side + this._ctx.lineWidth);
+
+      this._ctx.fillStyle = 'white';
+      this._ctx.font = '14px Arial';
+      this._ctx.textBaseline = 'bottom';
+      this._ctx.textAlign = 'center';
+      this._ctx.fillText('Ширина изображения: ' + this._image.naturalWidth + 'px, высота: ' + this._image.naturalHeight + 'px', 0, -this._resizeConstraint.side / 2 - 10);
 
       // Восстановление состояния канваса, которое было до вызова ctx.save
       // и последующего изменения системы координат. Нужно для того, чтобы
@@ -301,6 +333,24 @@
     this.x = x;
     this.y = y;
     this.side = side;
+  };
+
+  /**
+   * Вспомогательный тип, описывающий прямоугольник.
+   * @constructor
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} width
+   * @param {number} height
+   * @private
+   */
+  var Rectangle = function(x1, y1, x2, y2) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    this.width = x2 - x1;
+    this.height = y2 - y1;
   };
 
   /**
