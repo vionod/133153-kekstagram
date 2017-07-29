@@ -83,21 +83,6 @@
       // Очистка изображения.
       this._ctx.clearRect(0, 0, this._container.width, this._container.height);
 
-      // Параметры линии.
-      // NB! Такие параметры сохраняются на время всего процесса отрисовки
-      // canvas'a поэтому важно вовремя поменять их, если нужно начать отрисовку
-      // чего-либо с другой обводкой.
-
-      // Толщина линии.
-      this._ctx.lineWidth = 6;
-      // Цвет обводки.
-      this._ctx.strokeStyle = '#ffe753';
-      // Размер штрихов. Первый элемент массива задает длину штриха, второй
-      // расстояние между соседними штрихами.
-      this._ctx.setLineDash([15, 10]);
-      // Смещение первого штриха от начала линии.
-      this._ctx.lineDashOffset = 7;
-
       // Сохранение состояния канваса.
       // Подробней см. строку 132.
       this._ctx.save();
@@ -112,57 +97,14 @@
       // Координаты задаются от центра холста.
       this._ctx.drawImage(this._image, displX, displY);
 
-      // Отрисовка фигуры, затеняющей изоражений.
-      // Внешняя граница фона
-      this._ctx.beginPath();
-      this._ctx.moveTo(displX, displY);
-      this._ctx.lineTo(displX + this._container.width, displY);
-      this._ctx.lineTo(displX + this._container.width, displY + this._container.height);
-      this._ctx.lineTo(displX, displY + this._container.height);
-      this._ctx.lineTo(displX, displY);
+      // Отрисовка тени изображения
+      this._drawConstraintShadow(displX, displY);
 
-      // Установка координат кадрируемого изображения
-      var crop = new Rectangle(Math.min(Math.max(-this._resizeConstraint.side / 2, displX), displX + this._container.width),
-          Math.min(Math.max(-this._resizeConstraint.side / 2, displY), displY + this._container.height),
-          Math.min(Math.max(this._resizeConstraint.side / 2, displX), displX + this._container.width),
-          Math.min(Math.max(this._resizeConstraint.side / 2, displY), displY + this._container.height)
-        );
+      // Отрисовка обводки с типом Outline
+      this._drawConstraintOutline(Outline.ZIGZAG);
 
-      // Пересечение с областью, кадрируемого изображения,
-      // которое не треьуется затенять.
-      this._ctx.moveTo(crop.x1, crop.y1);
-      this._ctx.lineTo(crop.x2, crop.y1);
-      this._ctx.lineTo(crop.x2, crop.y2);
-      this._ctx.lineTo(crop.x1, crop.y2);
-      this._ctx.lineTo(crop.x1, crop.y1);
-      this._ctx.fillStyle = 'rgba(0, 0, 0, .8)';
-      this._ctx.fill('evenodd');
-
-      // Установка жёлтой заливки
-      this._ctx.fillStyle = '#ffe753';
-
-      // Отрисовка окружностей, с радиусом в половину толщины линии и шагом в толщину линии.
-      for (var i = (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2; i <= this._resizeConstraint.side / 2 + this._ctx.lineWidth / 2; i += this._ctx.lineWidth * 2) {
-        this._ctx.beginPath();
-        this._ctx.arc(i, (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2, this._ctx.lineWidth / 2, 0, 2 * Math.PI);
-        this._ctx.fill();
-        this._ctx.beginPath();
-        this._ctx.arc(-i, this._resizeConstraint.side / 2 + this._ctx.lineWidth / 2, this._ctx.lineWidth / 2, 0, 2 * Math.PI);
-        this._ctx.fill();
-        this._ctx.beginPath();
-        this._ctx.arc((-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2, i, this._ctx.lineWidth / 2, 0, 2 * Math.PI);
-        this._ctx.fill();
-        this._ctx.beginPath();
-        this._ctx.arc(this._resizeConstraint.side / 2 + this._ctx.lineWidth / 2, -i, this._ctx.lineWidth / 2, 0, 2 * Math.PI);
-        this._ctx.fill();
-      }
-
-      // Вывод текста
-      this._ctx.fillStyle = 'white';
-      this._ctx.font = '14px Arial';
-      this._ctx.textBaseline = 'bottom';
-      this._ctx.textAlign = 'center';
-      this._ctx.fillText('Ширина изображения: ' + this._image.naturalWidth + 'px, высота: ' + this._image.naturalHeight + 'px', 0, -this._resizeConstraint.side / 2 - 10);
+      // Отрисовка текстового заголовка
+      this._drawTextTitle();
 
       // Восстановление состояния канваса, которое было до вызова ctx.save
       // и последующего изменения системы координат. Нужно для того, чтобы
@@ -330,6 +272,132 @@
       imageToExport.src = temporaryCanvas.toDataURL('image/png');
 
       return imageToExport;
+    },
+
+    _drawConstraintShadow: function(x, y) {
+      // Отрисовка фигуры, затеняющей изоражение.
+      // Реализована по принципу заливки evenodd
+
+      // Внешняя граница фона
+      this._ctx.beginPath();
+      this._ctx.moveTo(x, y);
+      this._ctx.lineTo(x + this._container.width, y);
+      this._ctx.lineTo(x + this._container.width, y + this._container.height);
+      this._ctx.lineTo(x, y + this._container.height);
+      this._ctx.lineTo(x, y);
+
+      // Установка координат кадрируемого изображения
+      var constraintCrop = new Rectangle(Math.min(Math.max(-this._resizeConstraint.side / 2, x), x + this._container.width),
+          Math.min(Math.max(-this._resizeConstraint.side / 2, y), y + this._container.height),
+          Math.min(Math.max(this._resizeConstraint.side / 2, x), x + this._container.width),
+          Math.min(Math.max(this._resizeConstraint.side / 2, y), y + this._container.height)
+        );
+
+      // Пересечение с областью, кадрируемого изображения,
+      // которое не треьуется затенять.
+      this._ctx.moveTo(constraintCrop.x1, constraintCrop.y1);
+      this._ctx.lineTo(constraintCrop.x2, constraintCrop.y1);
+      this._ctx.lineTo(constraintCrop.x2, constraintCrop.y2);
+      this._ctx.lineTo(constraintCrop.x1, constraintCrop.y2);
+      this._ctx.lineTo(constraintCrop.x1, constraintCrop.y1);
+      this._ctx.fillStyle = 'rgba(0, 0, 0, .8)';
+      this._ctx.fill('evenodd');
+    },
+
+    _drawConstraintOutline: function(outline, fillStyle) {
+      var i;
+      var STEP_SIZE = 6;
+      var rect = new Rectangle((-this._resizeConstraint.side / 2) - STEP_SIZE / 2, (-this._resizeConstraint.side / 2) - STEP_SIZE / 2,
+            this._resizeConstraint.side / 2 + STEP_SIZE / 2, this._resizeConstraint.side / 2 + STEP_SIZE / 2);
+
+      // Установка типа обводки по-умолчанию
+      if (!outline) {
+        outline = Outline.DEFAULT;
+      }
+
+      // Установка цвета заливки по-умолчанию
+      if (!fillStyle) {
+        fillStyle = '#ffe753';
+      }
+
+      // Установка координат вершин рамки
+      // rect((-this._resizeConstraint.side / 2) - STEP_SIZE / 2, (-this._resizeConstraint.side / 2) - STEP_SIZE / 2,
+      //       this._resizeConstraint.side / 2 + STEP_SIZE / 2, this._resizeConstraint.side / 2 + STEP_SIZE / 2);
+
+      switch (outline) {
+        case Outline.DEFAULT:
+          // Толщина линии.
+          this._ctx.lineWidth = STEP_SIZE;
+          // Размер штрихов. Первый элемент массива задает длину штриха, второй
+          // расстояние между соседними штрихами.
+          this._ctx.setLineDash([15, 10]);
+          // Смещение первого штриха от начала линии.
+          this._ctx.lineDashOffset = 7;
+          // Установка цвета обводки
+          this._ctx.strokeStyle = fillStyle;
+
+          // Отрисовка прямоугольника, обозначающего область изображения после
+          // кадрирования. Координаты задаются от центра.
+          this._ctx.strokeRect(rect.x1, rect.y1, rect.width, rect.height);
+          break;
+        case Outline.DOTTED:
+          // Установка цвета заливки
+          this._ctx.fillStyle = fillStyle;
+
+          // Отрисовка окружностей, с радиусом в половину толщины линии и шагом в толщину линии.
+          for (i = rect.x1; i <= rect.x2 - STEP_SIZE; i += STEP_SIZE * 2) {
+            this._ctx.beginPath();
+            this._ctx.arc(i, rect.y1, STEP_SIZE / 2, 0, 2 * Math.PI);
+            this._ctx.fill();
+            this._ctx.beginPath();
+            this._ctx.arc(-i, rect.y2, STEP_SIZE / 2, 0, 2 * Math.PI);
+            this._ctx.fill();
+            this._ctx.beginPath();
+            this._ctx.arc(rect.x1, i, STEP_SIZE / 2, 0, 2 * Math.PI);
+            this._ctx.fill();
+            this._ctx.beginPath();
+            this._ctx.arc(rect.x2, -i, STEP_SIZE / 2, 0, 2 * Math.PI);
+            this._ctx.fill();
+          }
+          break;
+        case Outline.ZIGZAG:
+          // Толщина линии.
+          this._ctx.lineWidth = STEP_SIZE / 2;
+          // Установка цвета обводки
+          this._ctx.strokeStyle = fillStyle;
+          for (i = rect.x1; i <= rect.x2 - STEP_SIZE * 2; i += STEP_SIZE * 2) {
+            this._ctx.beginPath();
+            this._ctx.moveTo(i, rect.y1);
+            this._ctx.lineTo(i + STEP_SIZE, rect.y1 + STEP_SIZE);
+            this._ctx.lineTo(i + STEP_SIZE * 2, rect.y1);
+            this._ctx.stroke();
+            this._ctx.beginPath();
+            this._ctx.moveTo(-i, rect.y2);
+            this._ctx.lineTo(-i - STEP_SIZE, rect.y2 - STEP_SIZE);
+            this._ctx.lineTo(-i - STEP_SIZE * 2, rect.y2);
+            this._ctx.stroke();
+            this._ctx.beginPath();
+            this._ctx.moveTo(rect.x1, i);
+            this._ctx.lineTo(rect.x1 + STEP_SIZE, i + STEP_SIZE);
+            this._ctx.lineTo(rect.x1, i + STEP_SIZE * 2);
+            this._ctx.stroke();
+            this._ctx.beginPath();
+            this._ctx.moveTo(rect.x2, -i);
+            this._ctx.lineTo(rect.x2 - STEP_SIZE, -i - STEP_SIZE);
+            this._ctx.lineTo(rect.x2, -i - STEP_SIZE * 2);
+            this._ctx.stroke();
+          }
+          break;
+      }
+    },
+
+    _drawTextTitle: function() {
+      // Вывод текста
+      this._ctx.fillStyle = 'white';
+      this._ctx.font = '14px Arial';
+      this._ctx.textBaseline = 'bottom';
+      this._ctx.textAlign = 'center';
+      this._ctx.fillText('Ширина изображения: ' + this._image.naturalWidth + 'px, высота: ' + this._image.naturalHeight + 'px', 0, -this._resizeConstraint.side / 2 - 10);
     }
   };
 
@@ -363,6 +431,15 @@
     this.y2 = y2;
     this.width = x2 - x1;
     this.height = y2 - y1;
+  };
+
+  /**
+   * Вспомогательный тип, описывающий тип рамки.
+   * @enum {number} */
+  var Outline = {
+    DEFAULT: 0,
+    DOTTED: 1,
+    ZIGZAG: 2
   };
 
   /**
