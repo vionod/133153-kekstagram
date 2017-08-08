@@ -305,7 +305,7 @@
     },
 
     _drawConstraintOutline: function(outline, fillStyle) {
-      var i;
+      var i, j;
       var STEP_SIZE = 6;
       var rect = new Rectangle((-this._resizeConstraint.side / 2) - STEP_SIZE / 2, (-this._resizeConstraint.side / 2) - STEP_SIZE / 2,
             this._resizeConstraint.side / 2 + STEP_SIZE / 2, this._resizeConstraint.side / 2 + STEP_SIZE / 2);
@@ -344,20 +344,14 @@
           // Установка цвета заливки
           this._ctx.fillStyle = fillStyle;
 
-          // Отрисовка окружностей, с радиусом в половину толщины линии и шагом в толщину линии.
-          for (i = rect.x1; i <= rect.x2 - STEP_SIZE; i += STEP_SIZE * 2) {
-            this._ctx.beginPath();
-            this._ctx.arc(i, rect.y1, STEP_SIZE / 2, 0, 2 * Math.PI);
-            this._ctx.fill();
-            this._ctx.beginPath();
-            this._ctx.arc(-i, rect.y2, STEP_SIZE / 2, 0, 2 * Math.PI);
-            this._ctx.fill();
-            this._ctx.beginPath();
-            this._ctx.arc(rect.x1, i, STEP_SIZE / 2, 0, 2 * Math.PI);
-            this._ctx.fill();
-            this._ctx.beginPath();
-            this._ctx.arc(rect.x2, -i, STEP_SIZE / 2, 0, 2 * Math.PI);
-            this._ctx.fill();
+          // циклы для перебора сторон квадрата
+          for (i = 1; i <= 2; i++) {
+            for (j = 1; j <= 2; j++) {
+              // (3 - j) - возвращает противоположное значение: 1 при j=2, и 2 при j=1
+              // из верхней левой точки вправо и вниз, и из нижней правой - влево и вверх
+              // так, чтобы начальные точки двух сторон наложились, ибыло всего 2 "дырки
+              this._drawDottedLine(rect['x' + i], rect['y' + i], rect['x' + (3 - j)], rect['y' + j], STEP_SIZE);
+            }
           }
           break;
         case Outline.ZIGZAG:
@@ -365,30 +359,72 @@
           this._ctx.lineWidth = STEP_SIZE / 2;
           // Установка цвета обводки
           this._ctx.strokeStyle = fillStyle;
-          for (i = rect.x1; i <= rect.x2 - STEP_SIZE * 2; i += STEP_SIZE * 2) {
-            this._ctx.beginPath();
-            this._ctx.moveTo(i, rect.y1);
-            this._ctx.lineTo(i + STEP_SIZE, rect.y1 + STEP_SIZE);
-            this._ctx.lineTo(i + STEP_SIZE * 2, rect.y1);
-            this._ctx.stroke();
-            this._ctx.beginPath();
-            this._ctx.moveTo(-i, rect.y2);
-            this._ctx.lineTo(-i - STEP_SIZE, rect.y2 - STEP_SIZE);
-            this._ctx.lineTo(-i - STEP_SIZE * 2, rect.y2);
-            this._ctx.stroke();
-            this._ctx.beginPath();
-            this._ctx.moveTo(rect.x1, i);
-            this._ctx.lineTo(rect.x1 + STEP_SIZE, i + STEP_SIZE);
-            this._ctx.lineTo(rect.x1, i + STEP_SIZE * 2);
-            this._ctx.stroke();
-            this._ctx.beginPath();
-            this._ctx.moveTo(rect.x2, -i);
-            this._ctx.lineTo(rect.x2 - STEP_SIZE, -i - STEP_SIZE);
-            this._ctx.lineTo(rect.x2, -i - STEP_SIZE * 2);
-            this._ctx.stroke();
+
+          // циклы для перебора сторон квадрата
+          for (i = 1; i <= 2; i++) {
+            for (j = 1; j <= 2; j++) {
+              // (3 - j) - возвращает противоположное значение: 1 при j=2, и 2 при j=1
+              // из верхней левой точки по часовой стрелке
+              this._drawZigZagLine(rect['x' + i], rect['y' + j], rect['x' + (3 - j)], rect['y' + i], STEP_SIZE);
+            }
           }
           break;
       }
+    },
+
+    _drawZigZagLine: function(x1, y1, x2, y2, step) {
+      var x, y, stepX, stepY, i = false;
+      stepX = (x2 >= x1 ? 1 : -1) * (x2 !== x1); // направление зигазага по X: 1, -1, либо 0
+      stepY = (y2 >= y1 ? 1 : -1) * (y2 !== y1); // направление зигазага по Y: 1, -1, либо 0
+      this._ctx.beginPath();
+      this._ctx.moveTo(x1, y1);
+
+      // цикл прироста координаты x выполнятся только 1 раз, когда прирост идёт по Y,
+      // и с шагом step от x1 до x2, когда по X
+      x = x1;
+      do {
+
+        y = y1;
+
+        // цикл прироста координаты y выполнятся только 1 раз, когда прирост идёт по X,
+        // и с шагом step от y1 до y2, когда по Y
+        do {
+
+          // координаты x и y рисуемой линии изменяются линейно циклом (в этом случае !stepX и !stepY
+          // обнуляют второе слагаемое выражения), либо зигзагообразно (на 1 или 0 шагов) на шаг step
+          // со знаком, зависящим от направления (-stepX) и stepY соответственно
+          this._ctx.lineTo(x + step * i * (-stepY) * !stepX, y + step * i * stepX * !stepY);
+
+          i = !i; // переменная отвечающая за текущее направление зигзага, равно либо 1 (true), либо 0 (false)
+          y += step * stepY;
+        } while (Math.abs(y2 - y) >= step);
+        x += step * stepX;
+      } while (Math.abs(x2 - x) >= step);
+      this._ctx.stroke();
+    },
+
+    _drawDottedLine: function(x1, y1, x2, y2, step) {
+      var x, y, stepX, stepY;
+      stepX = (x2 >= x1 ? 1 : -1) * (x2 !== x1); // направление зигазага по X: 1, -1, либо 0
+      stepY = (y2 >= y1 ? 1 : -1) * (y2 !== y1); // направление зигазага по Y: 1, -1, либо 0
+      this._ctx.beginPath();
+
+      // цикл прироста координаты x выполнятся только 1 раз, когда прирост идёт по Y,
+      // и с шагом step от x1 до x2, когда по X
+      x = x1;
+      do {
+
+        y = y1;
+
+        // цикл прироста координаты y выполнятся только 1 раз, когда прирост идёт по X,
+        // и с шагом step от y1 до y2, когда по Y
+        do {
+          this._ctx.arc(x, y, step / 2, 0, 2 * Math.PI);
+          y += step * stepY * 2;
+        } while (Math.abs(y) <= Math.abs(y2) - step);
+        x += step * stepX * 2;
+      } while (Math.abs(x) <= Math.abs(x2) - step);
+      this._ctx.fill();
     },
 
     _drawTextTitle: function() {
