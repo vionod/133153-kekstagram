@@ -83,21 +83,6 @@
       // Очистка изображения.
       this._ctx.clearRect(0, 0, this._container.width, this._container.height);
 
-      // Параметры линии.
-      // NB! Такие параметры сохраняются на время всего процесса отрисовки
-      // canvas'a поэтому важно вовремя поменять их, если нужно начать отрисовку
-      // чего-либо с другой обводкой.
-
-      // Толщина линии.
-      this._ctx.lineWidth = 6;
-      // Цвет обводки.
-      this._ctx.strokeStyle = '#ffe753';
-      // Размер штрихов. Первый элемент массива задает длину штриха, второй
-      // расстояние между соседними штрихами.
-      this._ctx.setLineDash([15, 10]);
-      // Смещение первого штриха от начала линии.
-      this._ctx.lineDashOffset = 7;
-
       // Сохранение состояния канваса.
       // Подробней см. строку 132.
       this._ctx.save();
@@ -112,13 +97,14 @@
       // Координаты задаются от центра холста.
       this._ctx.drawImage(this._image, displX, displY);
 
-      // Отрисовка прямоугольника, обозначающего область изображения после
-      // кадрирования. Координаты задаются от центра.
-      this._ctx.strokeRect(
-          (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2,
-          (-this._resizeConstraint.side / 2) - this._ctx.lineWidth / 2,
-          this._resizeConstraint.side - this._ctx.lineWidth / 2,
-          this._resizeConstraint.side - this._ctx.lineWidth / 2);
+      // Отрисовка тени изображения
+      this._drawConstraintShadow(displX, displY);
+
+      // Отрисовка обводки с типом Outline
+      this._drawConstraintOutline(Outline.ZIGZAG);
+
+      // Отрисовка текстового заголовка
+      this._drawTextTitle();
 
       // Восстановление состояния канваса, которое было до вызова ctx.save
       // и последующего изменения системы координат. Нужно для того, чтобы
@@ -286,6 +272,168 @@
       imageToExport.src = temporaryCanvas.toDataURL('image/png');
 
       return imageToExport;
+    },
+
+    _drawConstraintShadow: function(x, y) {
+      // Отрисовка фигуры, затеняющей изоражение.
+      // Реализована по принципу заливки evenodd
+
+      // Внешняя граница фона
+      this._ctx.beginPath();
+      this._ctx.moveTo(x, y);
+      this._ctx.lineTo(x + this._container.width, y);
+      this._ctx.lineTo(x + this._container.width, y + this._container.height);
+      this._ctx.lineTo(x, y + this._container.height);
+      this._ctx.lineTo(x, y);
+
+      // Установка координат кадрируемого изображения
+      var constraintCrop = new Rectangle(Math.min(Math.max(-this._resizeConstraint.side / 2, x), x + this._container.width),
+          Math.min(Math.max(-this._resizeConstraint.side / 2, y), y + this._container.height),
+          Math.min(Math.max(this._resizeConstraint.side / 2, x), x + this._container.width),
+          Math.min(Math.max(this._resizeConstraint.side / 2, y), y + this._container.height)
+        );
+
+      // Пересечение с областью, кадрируемого изображения,
+      // которое не треьуется затенять.
+      this._ctx.moveTo(constraintCrop.x1, constraintCrop.y1);
+      this._ctx.lineTo(constraintCrop.x2, constraintCrop.y1);
+      this._ctx.lineTo(constraintCrop.x2, constraintCrop.y2);
+      this._ctx.lineTo(constraintCrop.x1, constraintCrop.y2);
+      this._ctx.lineTo(constraintCrop.x1, constraintCrop.y1);
+      this._ctx.fillStyle = 'rgba(0, 0, 0, .8)';
+      this._ctx.fill('evenodd');
+    },
+
+    _drawConstraintOutline: function(outline, fillStyle) {
+      var i, j;
+      var STEP_SIZE = 6;
+      var rect = new Rectangle((-this._resizeConstraint.side / 2) - STEP_SIZE / 2, (-this._resizeConstraint.side / 2) - STEP_SIZE / 2,
+            this._resizeConstraint.side / 2 + STEP_SIZE / 2, this._resizeConstraint.side / 2 + STEP_SIZE / 2);
+
+      // Установка типа обводки по-умолчанию
+      if (!outline) {
+        outline = Outline.DEFAULT;
+      }
+
+      // Установка цвета заливки по-умолчанию
+      if (!fillStyle) {
+        fillStyle = '#ffe753';
+      }
+
+      // Установка координат вершин рамки
+      // rect((-this._resizeConstraint.side / 2) - STEP_SIZE / 2, (-this._resizeConstraint.side / 2) - STEP_SIZE / 2,
+      //       this._resizeConstraint.side / 2 + STEP_SIZE / 2, this._resizeConstraint.side / 2 + STEP_SIZE / 2);
+
+      switch (outline) {
+        case Outline.DEFAULT:
+          // Толщина линии.
+          this._ctx.lineWidth = STEP_SIZE;
+          // Размер штрихов. Первый элемент массива задает длину штриха, второй
+          // расстояние между соседними штрихами.
+          this._ctx.setLineDash([15, 10]);
+          // Смещение первого штриха от начала линии.
+          this._ctx.lineDashOffset = 7;
+          // Установка цвета обводки
+          this._ctx.strokeStyle = fillStyle;
+
+          // Отрисовка прямоугольника, обозначающего область изображения после
+          // кадрирования. Координаты задаются от центра.
+          this._ctx.strokeRect(rect.x1, rect.y1, rect.width, rect.height);
+          break;
+        case Outline.DOTTED:
+          // Установка цвета заливки
+          this._ctx.fillStyle = fillStyle;
+
+          // циклы для перебора сторон квадрата
+          for (i = 1; i <= 2; i++) {
+            for (j = 1; j <= 2; j++) {
+              // (3 - j) - возвращает противоположное значение: 1 при j=2, и 2 при j=1
+              // из верхней левой точки вправо и вниз, и из нижней правой - влево и вверх
+              // так, чтобы начальные точки двух сторон наложились, ибыло всего 2 "дырки
+              this._drawDottedLine(rect['x' + i], rect['y' + i], rect['x' + (3 - j)], rect['y' + j], STEP_SIZE);
+            }
+          }
+          break;
+        case Outline.ZIGZAG:
+          // Толщина линии.
+          this._ctx.lineWidth = STEP_SIZE / 2;
+          // Установка цвета обводки
+          this._ctx.strokeStyle = fillStyle;
+
+          // циклы для перебора сторон квадрата
+          for (i = 1; i <= 2; i++) {
+            for (j = 1; j <= 2; j++) {
+              // (3 - j) - возвращает противоположное значение: 1 при j=2, и 2 при j=1
+              // из верхней левой точки по часовой стрелке
+              this._drawZigZagLine(rect['x' + i], rect['y' + j], rect['x' + (3 - j)], rect['y' + i], STEP_SIZE);
+            }
+          }
+          break;
+      }
+    },
+
+    _drawZigZagLine: function(x1, y1, x2, y2, step) {
+      var x, y, stepX, stepY, i = false;
+      stepX = (x2 >= x1 ? 1 : -1) * (x2 !== x1); // направление зигазага по X: 1, -1, либо 0
+      stepY = (y2 >= y1 ? 1 : -1) * (y2 !== y1); // направление зигазага по Y: 1, -1, либо 0
+      this._ctx.beginPath();
+      this._ctx.moveTo(x1, y1);
+
+      // цикл прироста координаты x выполнятся только 1 раз, когда прирост идёт по Y,
+      // и с шагом step от x1 до x2, когда по X
+      x = x1;
+      do {
+
+        y = y1;
+
+        // цикл прироста координаты y выполнятся только 1 раз, когда прирост идёт по X,
+        // и с шагом step от y1 до y2, когда по Y
+        do {
+
+          // координаты x и y рисуемой линии изменяются линейно циклом (в этом случае !stepX и !stepY
+          // обнуляют второе слагаемое выражения), либо зигзагообразно (на 1 или 0 шагов) на шаг step
+          // со знаком, зависящим от направления (-stepX) и stepY соответственно
+          this._ctx.lineTo(x + step * i * (-stepY) * !stepX, y + step * i * stepX * !stepY);
+
+          i = !i; // переменная отвечающая за текущее направление зигзага, равно либо 1 (true), либо 0 (false)
+          y += step * stepY;
+        } while (Math.abs(y2 - y) >= step);
+        x += step * stepX;
+      } while (Math.abs(x2 - x) >= step);
+      this._ctx.stroke();
+    },
+
+    _drawDottedLine: function(x1, y1, x2, y2, step) {
+      var x, y, stepX, stepY;
+      stepX = (x2 >= x1 ? 1 : -1) * (x2 !== x1); // направление зигазага по X: 1, -1, либо 0
+      stepY = (y2 >= y1 ? 1 : -1) * (y2 !== y1); // направление зигазага по Y: 1, -1, либо 0
+      this._ctx.beginPath();
+
+      // цикл прироста координаты x выполнятся только 1 раз, когда прирост идёт по Y,
+      // и с шагом step от x1 до x2, когда по X
+      x = x1;
+      do {
+
+        y = y1;
+
+        // цикл прироста координаты y выполнятся только 1 раз, когда прирост идёт по X,
+        // и с шагом step от y1 до y2, когда по Y
+        do {
+          this._ctx.arc(x, y, step / 2, 0, 2 * Math.PI);
+          y += step * stepY * 2;
+        } while (Math.abs(y) <= Math.abs(y2) - step);
+        x += step * stepX * 2;
+      } while (Math.abs(x) <= Math.abs(x2) - step);
+      this._ctx.fill();
+    },
+
+    _drawTextTitle: function() {
+      // Вывод текста
+      this._ctx.fillStyle = 'white';
+      this._ctx.font = '14px Arial';
+      this._ctx.textBaseline = 'bottom';
+      this._ctx.textAlign = 'center';
+      this._ctx.fillText('Ширина изображения: ' + this._image.naturalWidth + 'px, высота: ' + this._image.naturalHeight + 'px', 0, -this._resizeConstraint.side / 2 - 10);
     }
   };
 
@@ -301,6 +449,33 @@
     this.x = x;
     this.y = y;
     this.side = side;
+  };
+
+  /**
+   * Вспомогательный тип, описывающий прямоугольник.
+   * @constructor
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} width
+   * @param {number} height
+   * @private
+   */
+  var Rectangle = function(x1, y1, x2, y2) {
+    this.x1 = x1;
+    this.y1 = y1;
+    this.x2 = x2;
+    this.y2 = y2;
+    this.width = x2 - x1;
+    this.height = y2 - y1;
+  };
+
+  /**
+   * Вспомогательный тип, описывающий тип рамки.
+   * @enum {number} */
+  var Outline = {
+    DEFAULT: 0,
+    DOTTED: 1,
+    ZIGZAG: 2
   };
 
   /**
