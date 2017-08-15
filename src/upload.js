@@ -72,7 +72,22 @@
    * @return {boolean}
    */
   function resizeFormIsValid() {
-    return true;
+    return ((Number(resizeCtrls.x.value) + Number(resizeCtrls.size.value) <= currentResizer._image.naturalWidth) &&
+      (Number(resizeCtrls.y.value) + Number(resizeCtrls.size.value) <= currentResizer._image.naturalHeight) &&
+      (Math.min(resizeCtrls.x.value, resizeCtrls.y.value, resizeCtrls.size.value) >= 0));
+  }
+
+  /**
+   * Устанавливает ограничения для элементов управления.
+   */
+  function setResizeFormConrolsLimits() {
+    // var size = Math.min(currentResizer._image.naturalWidth, currentResizer._image.naturalHeight);
+    resizeCtrls.x.min = 0;
+    resizeCtrls.y.min = 0;
+    resizeCtrls.size.min = 0;
+    resizeCtrls.x.max = currentResizer._image.naturalWidth - Number(resizeCtrls.size.value);
+    resizeCtrls.y.max = currentResizer._image.naturalHeight - Number(resizeCtrls.size.value);
+    resizeCtrls.size.max = Math.min(currentResizer._image.naturalWidth - Number(resizeCtrls.x.value), currentResizer._image.naturalHeight - Number(resizeCtrls.y.value));
   }
 
   /**
@@ -86,6 +101,17 @@
    * @type {HTMLFormElement}
    */
   var resizeForm = document.forms['upload-resize'];
+
+  /**
+   * Элементы управления размерами изображения.
+   * @type {Object.<string, number>}
+   */
+  var resizeCtrls = {
+    x: resizeForm.querySelector('#resize-x'),
+    y: resizeForm.querySelector('#resize-y'),
+    size: resizeForm.querySelector('#resize-size')
+  };
+
 
   /**
    * Форма добавления фильтра.
@@ -154,6 +180,7 @@
 
           currentResizer = new Resizer(fileReader.result);
           currentResizer.setElement(resizeForm);
+          currentResizer._image.addEventListener('load', setResizeFormConrolsLimits);
           uploadMessage.classList.add('invisible');
 
           uploadForm.classList.add('invisible');
@@ -167,6 +194,35 @@
         // Показ сообщения об ошибке, если загружаемый файл, не является
         // поддерживаемым изображением.
         showMessage(Action.ERROR);
+      }
+    }
+  };
+
+  /**
+   * Обработчик ввода данных в форму кадрирования. Проводится валидация вводимых значений,
+   * и в случае ввода неверных значений, отправка формы отключается.
+   * @param {Event} evt
+   */
+  resizeForm.oninput = function(evt) {
+    //debugger;
+    var element = evt.target;
+    // console.log(element);
+    if (element.id === 'resize-x' || 'resize-y' || 'resize-size') {
+
+      var resizeFwd = resizeForm.querySelector('#resize-fwd');
+      if (!resizeFormIsValid()) {
+        // Показ сообщения об ошибке, отключение отправки и восстановление старого значения поля
+        // если форма не прошла валидацию.
+        showMessage(Action.ERROR, element.validationMessage);
+        setTimeout(hideMessage, 2000);
+        resizeFwd.disabled = true;
+        element.value = element.oldValue;
+      } else {
+        // Установка новых ограниений, только в случае, если форма валиднаы
+        setResizeFormConrolsLimits();
+        resizeFwd.disabled = false;
+        // Сохранение значения поля
+        element.oldValue = element.value;
       }
     }
   };
