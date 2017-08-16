@@ -81,13 +81,12 @@
    * Устанавливает ограничения для элементов управления.
    */
   function setResizeFormConrolsLimits() {
-    // var size = Math.min(currentResizer._image.naturalWidth, currentResizer._image.naturalHeight);
     resizeCtrls.x.min = 0;
     resizeCtrls.y.min = 0;
     resizeCtrls.size.min = 0;
-    resizeCtrls.x.max = currentResizer._image.naturalWidth - Number(resizeCtrls.size.value);
-    resizeCtrls.y.max = currentResizer._image.naturalHeight - Number(resizeCtrls.size.value);
-    resizeCtrls.size.max = Math.min(currentResizer._image.naturalWidth - Number(resizeCtrls.x.value), currentResizer._image.naturalHeight - Number(resizeCtrls.y.value));
+    resizeCtrls.x.max = currentResizer._image.naturalWidth - +resizeCtrls.size.value;
+    resizeCtrls.y.max = currentResizer._image.naturalHeight - +resizeCtrls.size.value;
+    resizeCtrls.size.max = Math.min(currentResizer._image.naturalWidth - +resizeCtrls.x.value, currentResizer._image.naturalHeight - +resizeCtrls.y.value);
   }
 
   /**
@@ -208,21 +207,26 @@
     var element = evt.target;
     // console.log(element);
     if (element.id === 'resize-x' || 'resize-y' || 'resize-size') {
-
       var resizeFwd = resizeForm.querySelector('#resize-fwd');
-      if (!resizeFormIsValid()) {
-        // Показ сообщения об ошибке, отключение отправки и восстановление старого значения поля
-        // если форма не прошла валидацию.
+      // Проверка, валиден ли ввод в поле
+      if (!element.validity.valid) {
+        // Показ сообщения об ошибке и отключение отправки
+        // если поле не валидно.
         showMessage(Action.ERROR, element.validationMessage);
         setTimeout(hideMessage, 2000);
         resizeFwd.disabled = true;
-        element.value = element.oldValue;
+        // Окончание проверки, если даже ввод в поле не валиден
+        return;
+      }
+      // Если сами по себе поля валидны, выполняетя проверка валидности всей формы
+      if (!resizeFormIsValid()) {
+        // Показ сообщения об ошибке и отключение отправки
+        // если форма не прошла валидацию.
+        showMessage(Action.ERROR, 'Суммы "Сторона" и "Слева", "Сверху" должны быть меньше ' + currentResizer._image.naturalWidth + 'px и ' + currentResizer._image.naturalHeight + 'px соответственно!');
+        setTimeout(hideMessage, 2500);
+        resizeFwd.disabled = true;
       } else {
-        // Установка новых ограниений, только в случае, если форма валиднаы
-        setResizeFormConrolsLimits();
         resizeFwd.disabled = false;
-        // Сохранение значения поля
-        element.oldValue = element.value;
       }
     }
   };
