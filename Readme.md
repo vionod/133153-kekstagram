@@ -1,7 +1,7 @@
 # Личный проект «Кекстаграм» [![Build status][travis-image]][travis-url] [![Dependency status][dependency-image]][dependency-url]
 
-* Студент: [Валерий Евдокимов](https://htmlacademy.ru/profile/vaprold).
-* Наставник: `Инструктор Кекс`.
+* Студент: [Михаил Скрипкин](https://up.htmlacademy.ru/javascript/4/user/133153).
+* Наставник: `Илья Знаменский`(https://htmlacademy.ru/profile/id165290).
 
 ---
 
