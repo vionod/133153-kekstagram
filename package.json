@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Личный проект «Кекстаграм» от HTML Academy",
-  "author": "Валерий Евдокимов",
+  "author": "Михаил Скрипкин",
   "repository": {
     "type": "git",
     "url": "git://github.com/htmlacademy-javascript/133153-kekstagram.git"
@@ -15,10 +15,8 @@
   "dependencies": {
     "eslint": "^2.4.0",
     "webpack": "^1.12.14",
-
     "webpack-dev-server": "^1.14.1"
   },
-
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "test": "eslint src",

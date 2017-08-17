@@ -198,11 +198,6 @@ body {
   background: rgba(255, 231, 83, 0.2) url("../img/icon-arrow.png") center no-repeat;
 }
 
-.upload-form-controls-fwd:disabled {
-  opacity: .5;
-  cursor: default;
-}
-
 .upload-resize canvas {
   position: absolute;
   top: 50%;
