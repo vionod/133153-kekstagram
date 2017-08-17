@@ -72,7 +72,21 @@
    * @return {boolean}
    */
   function resizeFormIsValid() {
-    return true;
+    return ((Number(resizeCtrls.x.value) + Number(resizeCtrls.size.value) <= currentResizer._image.naturalWidth) &&
+      (Number(resizeCtrls.y.value) + Number(resizeCtrls.size.value) <= currentResizer._image.naturalHeight) &&
+      (Math.min(resizeCtrls.x.value, resizeCtrls.y.value, resizeCtrls.size.value) >= 0));
+  }
+
+  /**
+   * Устанавливает ограничения для элементов управления.
+   */
+  function setResizeFormConrolsLimits() {
+    resizeCtrls.x.min = 0;
+    resizeCtrls.y.min = 0;
+    resizeCtrls.size.min = 0;
+    resizeCtrls.x.max = currentResizer._image.naturalWidth - +resizeCtrls.size.value;
+    resizeCtrls.y.max = currentResizer._image.naturalHeight - +resizeCtrls.size.value;
+    resizeCtrls.size.max = Math.min(currentResizer._image.naturalWidth - +resizeCtrls.x.value, currentResizer._image.naturalHeight - +resizeCtrls.y.value);
   }
 
   /**
@@ -86,6 +100,17 @@
    * @type {HTMLFormElement}
    */
   var resizeForm = document.forms['upload-resize'];
+
+  /**
+   * Элементы управления размерами изображения.
+   * @type {Object.<string, number>}
+   */
+  var resizeCtrls = {
+    x: resizeForm.querySelector('#resize-x'),
+    y: resizeForm.querySelector('#resize-y'),
+    size: resizeForm.querySelector('#resize-size')
+  };
+
 
   /**
    * Форма добавления фильтра.
@@ -154,6 +179,7 @@
 
           currentResizer = new Resizer(fileReader.result);
           currentResizer.setElement(resizeForm);
+          currentResizer._image.addEventListener('load', setResizeFormConrolsLimits);
           uploadMessage.classList.add('invisible');
 
           uploadForm.classList.add('invisible');
@@ -167,6 +193,40 @@
         // Показ сообщения об ошибке, если загружаемый файл, не является
         // поддерживаемым изображением.
         showMessage(Action.ERROR);
+      }
+    }
+  };
+
+  /**
+   * Обработчик ввода данных в форму кадрирования. Проводится валидация вводимых значений,
+   * и в случае ввода неверных значений, отправка формы отключается.
+   * @param {Event} evt
+   */
+  resizeForm.oninput = function(evt) {
+    //debugger;
+    var element = evt.target;
+    // console.log(element);
+    if (element.id === 'resize-x' || 'resize-y' || 'resize-size') {
+      var resizeFwd = resizeForm.querySelector('#resize-fwd');
+      // Проверка, валиден ли ввод в поле
+      if (!element.validity.valid) {
+        // Показ сообщения об ошибке и отключение отправки
+        // если поле не валидно.
+        showMessage(Action.ERROR, element.validationMessage);
+        setTimeout(hideMessage, 2000);
+        resizeFwd.disabled = true;
+        // Окончание проверки, если даже ввод в поле не валиден
+        return;
+      }
+      // Если сами по себе поля валидны, выполняетя проверка валидности всей формы
+      if (!resizeFormIsValid()) {
+        // Показ сообщения об ошибке и отключение отправки
+        // если форма не прошла валидацию.
+        showMessage(Action.ERROR, 'Суммы "Сторона" и "Слева", "Сверху" должны быть меньше ' + currentResizer._image.naturalWidth + 'px и ' + currentResizer._image.naturalHeight + 'px соответственно!');
+        setTimeout(hideMessage, 2500);
+        resizeFwd.disabled = true;
+      } else {
+        resizeFwd.disabled = false;
       }
     }
   };
